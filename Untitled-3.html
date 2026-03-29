@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PX SCAN - Hanz Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-purple: #d633ff;
+            --deep-purple: #8b00ff;
+            --success-green: #2ed573;
+            --warning-yellow: #eab308;
+            --danger-red: #ff4757;
+            --time-blue: #3498db;
+            --bg-dark: #050508;
+        }
+
+        body { 
+            background: var(--bg-dark); color: white; 
+            font-family: 'Press Start 2P', cursive;
+            text-align: center; margin: 0; overflow: hidden; 
+            user-select: none;
+            -webkit-tap-highlight-color: transparent; 
+            touch-action: none;
+        }
+
+        #bg-canvas {
+            position: fixed; top: 0; left: 0; z-index: -1;
+            width: 100vw; height: 100vh;
+            background: radial-gradient(circle at center, #1a0033 0%, #050508 100%);
+        }
+        
+        #homePage, #gamePage, #modePage, #settingsPage, #scorePage { 
+            display: none; width: 100vw; height: 100vh; 
+            position: fixed; top: 0; left: 0; 
+            flex-direction: column; justify-content: center; align-items: center; 
+        }
+
+        #mainLogo {
+            font-size: 2.5rem; margin: 20px 0; letter-spacing: 2px;
+            background: linear-gradient(to bottom, var(--neon-purple), var(--deep-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px var(--deep-purple));
+        }
+
+        .btn { 
+            padding: 15px 20px; font-size: 0.55rem; border: 4px solid #444; 
+            color: white; cursor: pointer; margin: 8px; 
+            font-family: 'Press Start 2P', cursive;
+            background: rgba(26, 26, 26, 0.8); width: 80%; max-width: 280px; 
+            backdrop-filter: blur(5px);
+            touch-action: manipulation;
+        }
+        
+        .btn:active { transform: scale(0.95); border-color: var(--neon-purple); }
+
+        .canvas-wrap {
+            display: flex; flex-direction: column; gap: 15px; align-items: center;
+        }
+
+        canvas.game-cvs { 
+            border: 3px solid #333; image-rendering: pixelated; 
+            background: #ffffff; /* Restored white gap/background */
+            max-width: 90vw; max-height: 35vh;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            cursor: crosshair;
+        }
+        
+        .stats-bar { 
+            width: 90%; max-width: 400px;
+            display: inline-flex; flex-direction: column; gap: 8px; 
+            margin: 10px; background: rgba(17, 17, 17, 0.9); padding: 12px; 
+            border: 3px solid #333; font-size: 0.5rem; 
+        }
+        .stats-row { display: flex; justify-content: space-between; align-items: center; }
+        
+        .heart-container { display: flex; gap: 8px; }
+        .p-heart { 
+            width: 14px; height: 12px; 
+            background-color: var(--danger-red);
+            clip-path: polygon(0 25%, 20% 25%, 20% 0, 45% 0, 45% 25%, 55% 25%, 55% 0, 80% 0, 80% 25%, 100% 25%, 100% 50%, 80% 50%, 80% 75%, 60% 75%, 60% 100%, 40% 100%, 40% 75%, 20% 75%, 20% 50%, 0 50%);
+        }
+        .p-heart.lost { background: #333; opacity: 0.3; }
+
+        #timerContainer { width: 100%; height: 8px; background: #222; border: 1px solid #444; margin: 5px 0; display: none; }
+        #timerBar { width: 100%; height: 100%; background: var(--time-blue); transition: width 0.1s linear; }
+
+        .overlay { 
+            display: none; position: fixed; top: 0; left: 0; 
+            width: 100%; height: 100%; background: rgba(0,0,0,0.95); 
+            flex-direction: column; justify-content: center; align-items: center; z-index: 100; 
+        }
+        .panel { background: #000; padding: 25px; border: 4px solid #333; width: 85%; max-width: 400px; }
+        
+        #taskText { color: var(--neon-purple); font-size: 0.45rem; margin: 10px 0; line-height: 1.5; }
+        
+        .stars { 
+            color: var(--warning-yellow); 
+            font-size: 2.2rem; 
+            margin: 20px 0; 
+            letter-spacing: 15px;
+            filter: drop-shadow(0 0 5px var(--warning-yellow));
+            text-shadow: 4px 4px #000;
+        }
+        .mode-info { font-size: 0.35rem; color: #888; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div id="homePage" style="display: flex;">
+        <h1 id="mainLogo">PX SCAN</h1>
+        <button class="btn" style="color:var(--neon-purple); border-color:var(--neon-purple);" onclick="showModes()">START GAME</button>
+        <button class="btn" onclick="showScoreboard()">SCOREBOARD</button>
+        <button class="btn" onclick="showSettings()">SETTINGS</button>
+        <div style="opacity: 0.5; font-size: 0.4rem; margin-top: 30px;">HANZ STUDIO &copy; 2026</div>
+    </div>
+
+    <div id="scorePage">
+        <h2 style="font-size: 0.8rem; color: var(--warning-yellow);">HIGH SCORES</h2>
+        <div class="panel">
+            <p style="font-size: 0.5rem;">NORMAL: <span id="highNormal">0</span></p>
+            <p style="font-size: 0.5rem;">TIME ATTACK: <span id="highTime">0</span></p>
+        </div>
+        <button class="btn" onclick="exitToHome()">BACK</button>
+    </div>
+
+    <div id="settingsPage">
+        <h2 style="font-size: 0.8rem;">SETTINGS</h2>
+        <button id="soundToggle" class="btn" onclick="toggleSound()">SOUND: ON</button>
+        <button class="btn" onclick="exitToHome()">BACK</button>
+    </div>
+
+    <div id="modePage">
+        <h2 style="font-size: 0.8rem;">SELECT MODE</h2>
+        <button class="btn" onclick="startGame('normal')">NORMAL MODE</button>
+        <div class="mode-info">3 LIVES - PROGRESSIVE GRID</div>
+        <button class="btn" onclick="startGame('time')">TIME ATTACK</button>
+        <div class="mode-info">30S LIMIT - SPEED FOCUS</div>
+        <button class="btn" onclick="exitToHome()">BACK</button>
+    </div>
+
+    <div id="gamePage">
+        <div class="stats-bar">
+            <div class="stats-row">
+                <div>LVL:<span id="lvlDisplay">1</span></div>
+                <div id="lifeUI" class="heart-container">
+                    <div id="h1" class="p-heart"></div>
+                    <div id="h2" class="p-heart"></div>
+                    <div id="h3" class="p-heart"></div>
+                </div>
+                <div id="timeText" style="display:none; color:var(--time-blue);">TIME:<span id="seconds">30</span>s</div>
+            </div>
+            <div id="timerContainer"><div id="timerBar"></div></div>
+            <div class="stats-row">
+                <div style="color:var(--success-green)">SCORE:<span id="scoreDisplay">0</span></div>
+                <div style="color:var(--warning-yellow)">HINTS:<span id="hintCount">3</span></div>
+            </div>
+        </div>
+
+        <div id="taskText">SCANNING PIXELS...</div>
+
+        <div class="canvas-wrap">
+            <canvas id="canvasL" class="game-cvs"></canvas>
+            <canvas id="canvasR" class="game-cvs"></canvas>
+        </div>
+
+        <div style="margin-top: 15px; display: flex; justify-content: center; width: 100%;">
+            <button id="hintBtn" class="btn" style="width:100px; background:var(--warning-yellow); color:black;" onclick="useHint()">HINT</button>
+            <button class="btn" style="width:100px;" onclick="exitToHome()">EXIT</button>
+        </div>
+
+        <div id="transition" class="overlay">
+            <div class="panel">
+                <h2 id="clearTitle" style="color: var(--success-green); font-size: 0.8rem;">CLEARED!</h2>
+                <div class="stars" id="starRating">★★★</div>
+                <p style="font-size: 0.5rem; margin: 10px 0;">TOTAL SCORE: <span id="currentLevelScore">0</span></p>
+                <button class="btn" style="border-color:var(--success-green); color:var(--success-green);" onclick="nextLevel()">NEXT LEVEL</button>
+                <button class="btn" onclick="exitToHome()">EXIT MENU</button>
+            </div>
+        </div>
+
+        <div id="gameOver" class="overlay">
+            <div class="panel">
+                <h2 id="deathReason" style="color: var(--danger-red); font-size: 1rem;">GAME OVER</h2>
+                <p id="finalScoreText" style="font-size: 0.6rem; margin: 20px 0;">SCORE: 0</p>
+                <button class="btn" onclick="exitToHome()">MENU</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const bgCvs = document.getElementById('bg-canvas'), bgCtx = bgCvs.getContext('2d');
+        let particles = []; let soundEnabled = true;
+        function resizeBg() { bgCvs.width = window.innerWidth; bgCvs.height = window.innerHeight; }
+        window.addEventListener('resize', resizeBg); resizeBg();
+        class Particle { constructor() { this.reset(); } reset() { this.x = Math.random() * bgCvs.width; this.y = Math.random() * bgCvs.height; this.size = Math.random() * 4 + 2; this.speed = Math.random() * 0.5 + 0.2; this.color = Math.random() > 0.5 ? '#d633ff' : '#3498db'; this.opacity = Math.random() * 0.5; } update() { this.y -= this.speed; if (this.y < -10) this.reset(); } draw() { bgCtx.fillStyle = this.color; bgCtx.globalAlpha = this.opacity; bgCtx.fillRect(this.x, this.y, this.size, this.size); } }
+        for(let i=0; i<40; i++) particles.push(new Particle());
+        function animateBg() { bgCtx.clearRect(0, 0, bgCvs.width, bgCvs.height); particles.forEach(p => { p.update(); p.draw(); }); requestAnimationFrame(animateBg); }
+        animateBg();
+
+        const Sound = {
+            ctx: null,
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            play(f, t, d, r) {
+                if(!soundEnabled) return; this.init();
+                try {
+                    const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+                    o.type = t; o.frequency.setValueAtTime(f, this.ctx.currentTime);
+                    if(r) o.frequency.exponentialRampToValueAtTime(r, this.ctx.currentTime + d);
+                    g.gain.setValueAtTime(0.05, this.ctx.currentTime); g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + d);
+                    o.connect(g); g.connect(this.ctx.destination); o.start(); o.stop(this.ctx.currentTime + d);
+                } catch(e) {}
+            },
+            correct() { this.play(600, 'square', 0.1, 1200); },
+            wrong() { this.play(150, 'sawtooth', 0.2, 50); },
+            gameOver() { [400, 300, 200].forEach((f, i) => setTimeout(() => this.play(f, 'triangle', 0.4, 40), i*150)); }
+        };
+
+        let level = 1, lives = 3, hints = 3, score = 0, gridSize = 4, tileSize = 40, gap = 2;
+        let differences = [], originalDiffsCount = 0, gameActive = false, gameMode = 'normal';
+        let timeLeft = 30, maxTime = 30, timerInterval;
+
+        const canvasL = document.getElementById('canvasL'), canvasR = document.getElementById('canvasR');
+        const ctxL = canvasL.getContext('2d'), ctxR = canvasR.getContext('2d');
+
+        function showModes() { document.getElementById('homePage').style.display = 'none'; document.getElementById('modePage').style.display = 'flex'; Sound.init(); }
+        function showSettings() { document.getElementById('homePage').style.display = 'none'; document.getElementById('settingsPage').style.display = 'flex'; }
+        function toggleSound() { soundEnabled = !soundEnabled; document.getElementById('soundToggle').innerText = `SOUND: ${soundEnabled ? 'ON' : 'OFF'}`; }
+        function showScoreboard() { document.getElementById('homePage').style.display = 'none'; document.getElementById('scorePage').style.display = 'flex'; document.getElementById('highNormal').innerText = localStorage.getItem('pxscan_high') || 0; document.getElementById('highTime').innerText = localStorage.getItem('pxscan_time') || 0; }
+
+        function startGame(mode) {
+            gameMode = mode; level = 1; score = 0; hints = 3; gameActive = true;
+            document.getElementById('scoreDisplay').innerText = "0";
+            document.getElementById('hintCount').innerText = "3";
+            document.getElementById('modePage').style.display = 'none';
+            document.getElementById('gamePage').style.display = 'flex';
+            document.getElementById('lifeUI').style.display = mode === 'normal' ? 'flex' : 'none';
+            document.getElementById('timerContainer').style.display = mode === 'time' ? 'block' : 'none';
+            document.getElementById('timeText').style.display = mode === 'time' ? 'block' : 'none';
+            initLevel();
+        }
+
+        function initLevel() {
+            lives = 3;
+            if(gameMode === 'time') { timeLeft = maxTime; startTimer(); }
+            document.querySelectorAll('.p-heart').forEach(h => h.classList.remove('lost'));
+            document.getElementById('transition').style.display = 'none';
+            
+            gridSize = 3 + Math.floor(level / 2);
+            if(gridSize > 10) gridSize = 10;
+            
+            const screenW = window.innerWidth;
+            tileSize = Math.floor((screenW * 0.85) / gridSize);
+            if(tileSize > 45) tileSize = 45;
+
+            const totalSize = (gridSize * tileSize) + gap;
+            canvasL.width = canvasR.width = totalSize;
+            canvasL.height = canvasR.height = totalSize;
+
+            originalDiffsCount = level > 4 ? (level > 8 ? 3 : 2) : 1;
+            document.getElementById('lvlDisplay').innerText = level;
+            generateData(originalDiffsCount);
+            updateTaskText();
+            gameActive = true;
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if(!gameActive) return;
+                timeLeft -= 0.1;
+                if(timeLeft <= 0) { timeLeft = 0; endGame("OUT OF TIME!"); }
+                document.getElementById('seconds').innerText = Math.ceil(timeLeft);
+                document.getElementById('timerBar').style.width = (timeLeft / maxTime * 100) + "%";
+            }, 100);
+        }
+
+        function generateData(numDiffs) {
+            const hues = [];
+            for (let i = 0; i < gridSize * gridSize; i++) hues.push(Math.floor(Math.random() * 360));
+            ctxL.clearRect(0, 0, canvasL.width, canvasL.height);
+            ctxR.clearRect(0, 0, canvasR.width, canvasR.height);
+            hues.forEach((h, i) => drawPixel(ctxL, h, i));
+            let slaveHues = [...hues];
+            differences = [];
+            while(differences.length < numDiffs) {
+                let idx = Math.floor(Math.random() * slaveHues.length);
+                if (!differences.includes(idx)) {
+                    slaveHues[idx] = (slaveHues[idx] + 90) % 360; 
+                    differences.push(idx);
+                }
+            }
+            slaveHues.forEach((h, i) => drawPixel(ctxR, h, i));
+        }
+
+        function drawPixel(ctx, h, i) {
+            let x = (i % gridSize) * tileSize + gap, y = Math.floor(i / gridSize) * tileSize + gap;
+            ctx.fillStyle = `hsl(${h}, 70%, 50%)`;
+            ctx.fillRect(x, y, tileSize - gap, tileSize - gap);
+        }
+
+        function handleInput(e, targetCanvas) {
+            if(!gameActive) return;
+            e.preventDefault(); 
+
+            const rect = targetCanvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const scaleX = targetCanvas.width / rect.width;
+            const scaleY = targetCanvas.height / rect.height;
+            const x = (clientX - rect.left) * scaleX;
+            const y = (clientY - rect.top) * scaleY;
+
+            const col = Math.floor(x / tileSize);
+            const row = Math.floor(y / tileSize);
+            const clicked = row * gridSize + col;
+
+            if (differences.includes(clicked)) {
+                differences = differences.filter(i => i !== clicked);
+                Sound.correct();
+                updateTaskText();
+                if(gameMode === 'time') timeLeft = Math.min(timeLeft + 2, maxTime);
+                
+                [ctxL, ctxR].forEach(ctx => {
+                    ctx.fillStyle = "white"; 
+                    ctx.font = `${Math.floor(tileSize * 0.5)}px 'Press Start 2P'`; 
+                    ctx.textAlign = "center";
+                    ctx.fillText("X", col * tileSize + (tileSize/2), row * tileSize + (tileSize/2) + (tileSize/4));
+                });
+
+                if (differences.length === 0) {
+                    gameActive = false;
+                    clearInterval(timerInterval);
+                    setTimeout(() => {
+                        const starRating = lives === 3 ? "★★★" : (lives === 2 ? "★★☆" : "★☆☆");
+                        document.getElementById('starRating').innerText = starRating;
+                        document.getElementById('currentLevelScore').innerText = score + (level * 50);
+                        document.getElementById('clearTitle').innerText = `LVL ${level} OK`;
+                        document.getElementById('transition').style.display = 'flex';
+                    }, 300);
+                }
+            } else {
+                Sound.wrong();
+                if(gameMode === 'normal') {
+                    document.getElementById('h' + lives).classList.add('lost');
+                    lives--; if(lives <= 0) endGame("OUT OF LIVES!");
+                } else { timeLeft -= 3; }
+            }
+        }
+
+        [canvasL, canvasR].forEach(cvs => {
+            cvs.addEventListener('touchstart', (e) => handleInput(e, cvs), {passive: false});
+            cvs.addEventListener('mousedown', (e) => handleInput(e, cvs));
+        });
+
+        function updateTaskText() {
+            let found = originalDiffsCount - differences.length;
+            document.getElementById('taskText').innerText = `SCAN: [${found}/${originalDiffsCount}] PIXELS`;
+        }
+
+        function useHint() {
+            if(hints > 0 && differences.length > 0) {
+                hints--; document.getElementById('hintCount').innerText = hints;
+                const target = differences[0], col = target % gridSize, row = Math.floor(target / gridSize);
+                [ctxL, ctxR].forEach(ctx => {
+                    ctx.strokeStyle = "white"; 
+                    ctx.lineWidth = 5; 
+                    ctx.strokeRect(col * tileSize + gap, row * tileSize + gap, tileSize - gap, tileSize - gap);
+                });
+                if(hints <= 0) document.getElementById('hintBtn').disabled = true;
+            }
+        }
+
+        function endGame(reason) {
+            gameActive = false; clearInterval(timerInterval); Sound.gameOver();
+            const storageKey = gameMode === 'normal' ? 'pxscan_high' : 'pxscan_time';
+            const currentHigh = parseInt(localStorage.getItem(storageKey)) || 0;
+            if(score > currentHigh) localStorage.setItem(storageKey, score);
+            document.getElementById('deathReason').innerText = reason;
+            document.getElementById('finalScoreText').innerText = "SCORE: " + score;
+            document.getElementById('gameOver').style.display = 'flex';
+        }
+
+        function nextLevel() { score += (level * 50); level++; document.getElementById('scoreDisplay').innerText = score; initLevel(); }
+        function exitToHome() { location.reload(); }
+    </script>
+</body>
+</html>
